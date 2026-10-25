@@ -25,7 +25,7 @@ app.use(routes);
 app.use(notFound);
 app.use(errorHandler);
 
-await mongoose.connect(config.mongoUrl);
+await mongoose.connect(config.mongoUrl, { dbName: config.mongoDb });
 // Builds the indexes (unique emails and so on) before taking requests.
 await mongoose.syncIndexes();
 

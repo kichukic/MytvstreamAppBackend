@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 *.log
+# Any env file with real values (MongoDB Atlas credentials and so on)
+*.env
+!.env.example

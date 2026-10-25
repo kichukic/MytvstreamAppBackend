@@ -1,0 +1,38 @@
+{
+  "name": "forus-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chat backend for the ForUs app: accounts, friends and messages.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=.env dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:up": "docker compose up -d mongo",
+    "db:down": "docker compose stop mongo"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.4",
+    "socket.io": "^4.8.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

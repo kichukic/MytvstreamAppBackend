@@ -1,0 +1,15 @@
+# MongoDB for local development, on port 27018 (27017 is left free for a
+# MongoDB installed on the machine itself). It listens on this machine only;
+# the phone talks to the Node server, never to the database directly.
+services:
+  mongo:
+    image: mongo:8
+    container_name: forus-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - forus-mongo-data:/data/db
+
+volumes:
+  forus-mongo-data:

@@ -7,6 +7,7 @@ import { conversationsRoutes } from './conversations.routes.js';
 import { friendsRoutes } from './friends.routes.js';
 import { historyRoutes } from './history.routes.js';
 import { adminRoutes } from './admin.routes.js';
+import { bannerRoutes } from './banner.routes.js';
 
 export const routes = Router();
 
@@ -20,3 +21,4 @@ routes.use(conversationsRoutes);
 routes.use(historyRoutes);
 routes.use(contactsRoutes);
 routes.use(adminRoutes);
+routes.use(bannerRoutes);

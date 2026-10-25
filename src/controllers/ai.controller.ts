@@ -1,10 +1,15 @@
 import type { Request, Response } from 'express';
 
-// Older names (1.5-flash, 2.0-flash, 2.5-flash) are retired for keys issued
-// now; Google points callers at the 3.x series, with -latest as a rolling alias.
-const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-flash-latest'];
+// Fast, high-quota models first (flash-lite series), then standard flash and gemma fallbacks.
+const GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+  'gemma-4-31b-it',
+];
 const MODEL_ATTEMPTS = 2;
-const PER_REQUEST_TIMEOUT_MS = 9000;
+const PER_REQUEST_TIMEOUT_MS = 12000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function aiSearch(req: Request, res: Response) {

@@ -10,7 +10,13 @@ import { emitTo } from './realtime.service.js';
 const PAGE_SIZE = 40;
 const MAX_CONVERSATIONS = 200;
 
-export type SharedTitle = { kind: 'video'; videoId: string; title: string };
+export type SharedTitle =
+  | { kind: 'video'; videoId: string; title: string }
+  | { kind: 'web'; url: string; title: string; poster?: string }
+  | { kind: 'stream'; url: string; title: string; poster?: string }
+  | { kind: 'movie'; id: string; title: string; poster?: string; year?: string }
+  | { kind: 'moviebox'; subjectId: string; season?: number; episode?: number; title: string; poster?: string }
+  | { kind: 'file'; source: string; itemId: number; fileId: number; title: string };
 
 /** Every conversation, newest first, with its last message and unread count. */
 export async function listConversations(self: Types.ObjectId) {

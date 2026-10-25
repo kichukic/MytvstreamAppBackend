@@ -9,14 +9,28 @@ const title = z.string().trim().min(1).max(300);
 // The kinds of title kept: YouTube videos, live channels, and files in the
 // person's own TorBox. Each comes with the key the app files it under.
 const item = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('video'), videoId: z.string().regex(/^[\w-]{11}$/), title }),
-  z.object({ kind: z.literal('live'), channelId: z.string().regex(/^UC[\w-]{22}$/), title }),
+  z.object({ kind: z.literal('video'), videoId: z.string(), title }),
+  z.object({ kind: z.literal('live'), channelId: z.string(), title }),
   z.object({
     kind: z.literal('file'),
     source: z.enum(['torrents', 'usenet', 'webdl']),
     itemId: z.number().int().nonnegative(),
     fileId: z.number().int().nonnegative(),
     title,
+  }),
+  z.object({
+    kind: z.literal('moviebox'),
+    subjectId: z.string(),
+    season: z.number().int().nonnegative().optional(),
+    episode: z.number().int().nonnegative().optional(),
+    title,
+    poster: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal('stream'),
+    url: z.string(),
+    title,
+    poster: z.string().optional(),
   }),
 ]);
 
@@ -30,6 +44,10 @@ function keyOf(i: Item): string {
       return `live:${i.channelId}`;
     case 'file':
       return `file:${i.source}:${i.itemId}:${i.fileId}`;
+    case 'moviebox':
+      return `moviebox:${i.subjectId}:${i.season ?? 0}:${i.episode ?? 0}`;
+    case 'stream':
+      return `stream:${i.url}`;
   }
 }
 

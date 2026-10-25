@@ -3,8 +3,22 @@ import { Schema, model, type InferSchemaType, type Types } from 'mongoose';
 // A film or show shared from ForUs: enough to draw its card and play it.
 const titleSchema = new Schema(
   {
-    kind: { type: String, enum: ['video'], required: true },
-    videoId: { type: String, required: true, maxlength: 20 },
+    kind: {
+      type: String,
+      enum: ['video', 'web', 'stream', 'movie', 'moviebox', 'file'],
+      required: true,
+    },
+    videoId: { type: String, maxlength: 50 },
+    url: { type: String, maxlength: 2000 },
+    id: { type: String, maxlength: 100 },
+    subjectId: { type: String, maxlength: 50 },
+    season: { type: Number },
+    episode: { type: Number },
+    poster: { type: String, maxlength: 2000 },
+    year: { type: String, maxlength: 20 },
+    source: { type: String, maxlength: 20 },
+    itemId: { type: Number },
+    fileId: { type: Number },
     title: { type: String, required: true, maxlength: 300 },
   },
   { _id: false },

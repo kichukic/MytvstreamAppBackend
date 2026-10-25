@@ -6,17 +6,52 @@ import { objectId, parse } from '../utils/validate.js';
 
 const pageQuery = z.object({ before: z.iso.datetime().optional() });
 
+const titleSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('video'),
+    videoId: z.string().max(50),
+    title: z.string().trim().min(1).max(300),
+  }),
+  z.object({
+    kind: z.literal('web'),
+    url: z.string().max(2000),
+    title: z.string().trim().min(1).max(300),
+    poster: z.string().max(2000).optional(),
+  }),
+  z.object({
+    kind: z.literal('stream'),
+    url: z.string().max(2000),
+    title: z.string().trim().min(1).max(300),
+    poster: z.string().max(2000).optional(),
+  }),
+  z.object({
+    kind: z.literal('movie'),
+    id: z.string().max(100),
+    title: z.string().trim().min(1).max(300),
+    poster: z.string().max(2000).optional(),
+    year: z.string().max(20).optional(),
+  }),
+  z.object({
+    kind: z.literal('moviebox'),
+    subjectId: z.string().max(50),
+    season: z.number().int().nonnegative().optional(),
+    episode: z.number().int().nonnegative().optional(),
+    title: z.string().trim().min(1).max(300),
+    poster: z.string().max(2000).optional(),
+  }),
+  z.object({
+    kind: z.literal('file'),
+    source: z.string().max(20),
+    itemId: z.number().int(),
+    fileId: z.number().int(),
+    title: z.string().trim().min(1).max(300),
+  }),
+]);
+
 const sendBody = z
   .object({
     text: z.string().trim().max(4000).optional(),
-    // A ForUs title (a YouTube film or episode) shared as a card.
-    title: z
-      .object({
-        kind: z.literal('video'),
-        videoId: z.string().regex(/^[\w-]{11}$/, 'Invalid video.'),
-        title: z.string().trim().min(1).max(300),
-      })
-      .optional(),
+    title: titleSchema.optional(),
   })
   .refine((b) => !!b.text || !!b.title, 'Type a message.');
 

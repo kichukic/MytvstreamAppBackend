@@ -25,16 +25,35 @@ app.use(routes);
 app.use(notFound);
 app.use(errorHandler);
 
-await mongoose.connect(config.mongoUrl, { dbName: config.mongoDb });
-// Builds the indexes (unique emails and so on) before taking requests.
-await mongoose.syncIndexes();
-
 const server = createServer(app);
 startRealtime(server);
-// On every network interface, so the phone can reach it over Wi-Fi.
+// On every network interface, so the phone can reach it over Wi-Fi. It starts
+// listening before the database is up, so the host sees it running and
+// /health can say what's wrong while the database is out of reach.
 server.listen(config.port, '0.0.0.0', () => {
   console.log(`ForUs backend on http://0.0.0.0:${config.port}`);
 });
+
+const RETRY_MS = 15000;
+
+// Keeps trying until the database answers (e.g. while Atlas's network access
+// list doesn't include this host yet), instead of the server exiting.
+async function connectDatabase() {
+  for (;;) {
+    try {
+      await mongoose.connect(config.mongoUrl, { dbName: config.mongoDb, serverSelectionTimeoutMS: 10000 });
+      // Builds the indexes (unique emails and so on).
+      await mongoose.syncIndexes();
+      console.log('Database connected');
+      return;
+    } catch (err) {
+      console.error(`Database unreachable, retrying in ${RETRY_MS / 1000}s: ${(err as Error).message}`);
+      await mongoose.disconnect().catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+    }
+  }
+}
+void connectDatabase();
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

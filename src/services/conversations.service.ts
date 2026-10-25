@@ -4,6 +4,7 @@ import type { Types } from 'mongoose';
 import { pairKey } from '../models/friendship.model.js';
 import { Message, publicMessage, type MessageDoc } from '../models/message.model.js';
 import { User, publicUser } from '../models/user.model.js';
+import { VoiceClip } from '../models/voiceClip.model.js';
 import { assertFriends } from './friends.service.js';
 import { emitTo } from './realtime.service.js';
 
@@ -63,7 +64,7 @@ export async function listMessages(self: Types.ObjectId, other: Types.ObjectId, 
 export async function sendMessage(
   self: Types.ObjectId,
   other: Types.ObjectId,
-  content: { text?: string; title?: SharedTitle },
+  content: { text?: string; title?: SharedTitle; voice?: { durationMs: number; mime: string; data: Buffer } },
 ) {
   await assertFriends(self, other);
   const message = await Message.create({
@@ -72,7 +73,12 @@ export async function sendMessage(
     recipient: other,
     text: content.text || undefined,
     title: content.title,
+    voice: content.voice ? { durationMs: content.voice.durationMs } : undefined,
   });
+  // The recording waits here until the friend's phone collects it.
+  if (content.voice) {
+    await VoiceClip.create({ message: message._id, recipient: other, mime: content.voice.mime, data: content.voice.data });
+  }
   const out = publicMessage(message.toObject() as MessageDoc);
   const sender = await User.findById(self, 'name email emailVerified').lean();
   // To the friend, and to the sender's other devices.
@@ -93,4 +99,17 @@ export async function markRead(self: Types.ObjectId, other: Types.ObjectId) {
     emitTo(other, 'read', { userId: self.toString(), at: at.toISOString() });
     emitTo(self, 'read', { userId: self.toString(), with: other.toString(), at: at.toISOString() });
   }
+}
+
+/**
+ * A voice message's recording, for the phone it was sent to. Null once that
+ * phone has collected it (or it expired): each phone then has its own copy.
+ */
+export async function getVoiceClip(self: Types.ObjectId, messageId: Types.ObjectId) {
+  return VoiceClip.findOne({ message: messageId, recipient: self }, 'mime data').lean();
+}
+
+/** The recipient's phone has saved the recording; the server lets it go. */
+export async function voiceClipReceived(self: Types.ObjectId, messageId: Types.ObjectId) {
+  await VoiceClip.deleteOne({ message: messageId, recipient: self });
 }

@@ -32,6 +32,9 @@ const messageSchema = new Schema(
     recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     text: { type: String, maxlength: 4000 },
     title: { type: titleSchema },
+    // A voice message. The recording itself lives on the two phones; the
+    // server holds it only until the recipient's phone has it (VoiceClip).
+    voice: { type: new Schema({ durationMs: { type: Number, required: true } }, { _id: false }) },
     readAt: { type: Date },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
@@ -52,6 +55,7 @@ export function publicMessage(m: MessageDoc) {
     recipient: m.recipient.toString(),
     text: m.text ?? undefined,
     title: m.title ?? undefined,
+    voice: m.voice ? { durationMs: m.voice.durationMs } : undefined,
     createdAt: m.createdAt.toISOString(),
     readAt: m.readAt ? m.readAt.toISOString() : undefined,
   };

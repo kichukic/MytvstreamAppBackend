@@ -12,6 +12,11 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(err.status).json({ error: err.message });
     return;
   }
+  // Too big to accept (a voice recording over its limit, say).
+  if ((err as { type?: string })?.type === 'entity.too.large') {
+    res.status(413).json({ error: 'That is too large to send.' });
+    return;
+  }
   // A body that isn't valid JSON.
   if (err instanceof SyntaxError) {
     res.status(400).json({ error: 'Invalid request.' });

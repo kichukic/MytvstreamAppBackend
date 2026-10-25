@@ -75,3 +75,36 @@ export async function markRead(req: Request, res: Response) {
   await conversationsService.markRead(currentUser(req), objectId(req.params.userId, 'user'));
   res.status(204).end();
 }
+
+// A voice message arrives as the raw recording (see the route), with its
+// length in ?durationMs. Phones record AAC in an MP4/M4A file.
+const VOICE_TYPES = new Set(['audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/mpeg', 'audio/ogg', 'audio/webm']);
+const voiceQuery = z.object({ durationMs: z.coerce.number().int().min(300, 'Too short.').max(15 * 60 * 1000, 'Too long.') });
+
+export async function sendVoice(req: Request, res: Response) {
+  const { durationMs } = parse(voiceQuery, req.query);
+  const mime = (req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+  const data = req.body;
+  if (!VOICE_TYPES.has(mime) || !Buffer.isBuffer(data) || data.length < 512) {
+    res.status(400).json({ error: "That recording couldn't be sent." });
+    return;
+  }
+  const message = await conversationsService.sendMessage(currentUser(req), objectId(req.params.userId, 'user'), {
+    voice: { durationMs, mime, data },
+  });
+  res.status(201).json({ message });
+}
+
+export async function getVoice(req: Request, res: Response) {
+  const clip = await conversationsService.getVoiceClip(currentUser(req), objectId(req.params.messageId, 'message'));
+  if (!clip) {
+    res.status(404).json({ error: 'This voice message is no longer available.' });
+    return;
+  }
+  res.type(clip.mime).send(Buffer.from(clip.data.buffer ?? clip.data));
+}
+
+export async function voiceReceived(req: Request, res: Response) {
+  await conversationsService.voiceClipReceived(currentUser(req), objectId(req.params.messageId, 'message'));
+  res.status(204).end();
+}

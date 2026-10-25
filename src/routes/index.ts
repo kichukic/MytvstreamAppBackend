@@ -6,6 +6,7 @@ import { contactsRoutes } from './contacts.routes.js';
 import { conversationsRoutes } from './conversations.routes.js';
 import { friendsRoutes } from './friends.routes.js';
 import { historyRoutes } from './history.routes.js';
+import { adminRoutes } from './admin.routes.js';
 
 export const routes = Router();
 
@@ -18,3 +19,4 @@ routes.use(friendsRoutes);
 routes.use(conversationsRoutes);
 routes.use(historyRoutes);
 routes.use(contactsRoutes);
+routes.use(adminRoutes);

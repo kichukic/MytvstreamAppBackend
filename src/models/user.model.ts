@@ -17,6 +17,10 @@ const userSchema = new Schema(
     // code, so friends who find you by number have the right person.
     // Digits only with the country code, e.g. 919876543210.
     phone: { type: String, unique: true, sparse: true },
+    isAdmin: { type: Boolean, default: false },
+    isadmin: { type: Boolean, default: false },
+    screenTimeSeconds: { type: Number, default: 0 },
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true },
 );
@@ -43,5 +47,8 @@ export function ownProfile(user: UserDoc) {
     emailVerified: !!user.emailVerified,
     phone: user.phone ?? undefined,
     hasPassword: !!user.passwordHash,
+    isAdmin: !!(user.isAdmin || (user as any).isadmin),
+    screenTimeSeconds: user.screenTimeSeconds ?? 0,
+    lastActiveAt: user.lastActiveAt,
   };
 }

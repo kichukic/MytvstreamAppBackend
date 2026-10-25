@@ -1,6 +1,6 @@
-// Settings from the environment: .env, plus atlas-credentials.env (from MongoDB
-// Atlas) when it's there. The server refuses to start without a proper JWT
-// secret rather than run with a guessable one.
+// Settings from the environment (.env locally, the dashboard on Render). The
+// server refuses to start without a proper JWT secret rather than run with a
+// guessable one.
 function required(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is not set. Copy .env.example to .env and fill it in.`);

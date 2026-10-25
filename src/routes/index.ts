@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { authRoutes } from './auth.routes.js';
 import { conversationsRoutes } from './conversations.routes.js';
 import { friendsRoutes } from './friends.routes.js';
+import { historyRoutes } from './history.routes.js';
 
 export const routes = Router();
 
@@ -12,3 +13,4 @@ routes.get('/health', (_req, res) => {
 routes.use(authRoutes);
 routes.use(friendsRoutes);
 routes.use(conversationsRoutes);
+routes.use(historyRoutes);

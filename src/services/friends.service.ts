@@ -9,7 +9,7 @@ import { emitTo } from './realtime.service.js';
 
 export type Relation = 'none' | 'friends' | 'requested' | 'incoming';
 type Link = { requester: Types.ObjectId; status: string } | null;
-type Person = { _id: Types.ObjectId; name: string; email: string };
+type Person = { _id: Types.ObjectId; name: string; email?: string | null; emailVerified?: boolean | null };
 
 /** How `self` relates to the other side of a friendship record. */
 function relation(link: Link, self: Types.ObjectId): Relation {
@@ -19,7 +19,8 @@ function relation(link: Link, self: Types.ObjectId): Relation {
 }
 
 export async function lookUp(self: Types.ObjectId, query: { email: string } | { phone: string }) {
-  const user = await User.findOne(query);
+  // Only a verified email finds someone (a phone number always is).
+  const user = await User.findOne('email' in query ? { ...query, emailVerified: true } : query);
   if (!user) throw new HttpError(404, 'No one on ForUs has that email or number.');
   if (user._id.equals(self)) throw new HttpError(400, "That's you.");
   const link = await Friendship.findOne({ pair: pairKey(self, user._id) });
@@ -29,8 +30,8 @@ export async function lookUp(self: Types.ObjectId, query: { email: string } | { 
 /** Friends, plus requests waiting either way, most recent first. */
 export async function listFriends(self: Types.ObjectId) {
   const links = await Friendship.find({ $or: [{ requester: self }, { recipient: self }] })
-    .populate<{ requester: Person }>('requester', 'name email')
-    .populate<{ recipient: Person }>('recipient', 'name email')
+    .populate<{ requester: Person }>('requester', 'name email emailVerified')
+    .populate<{ recipient: Person }>('recipient', 'name email emailVerified')
     .sort({ updatedAt: -1 })
     .lean();
 
@@ -52,7 +53,7 @@ export async function listFriends(self: Types.ObjectId) {
 }
 
 async function notify(to: Types.ObjectId, event: 'friend-request' | 'friend-accepted', from: Types.ObjectId, extra = {}) {
-  const user = await User.findById(from, 'name email').lean();
+  const user = await User.findById(from, 'name email emailVerified').lean();
   if (user) emitTo(to, event, { ...extra, user: publicUser(user) });
 }
 

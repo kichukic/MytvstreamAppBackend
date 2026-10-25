@@ -1,15 +1,20 @@
 import { Schema, model, type InferSchemaType, type Types } from 'mongoose';
 
-// An account made with email + password, or with a verified phone number, or
-// both. At least one of email and phone is always set.
+// An account reached by a verified phone number, a verified email, or (for
+// accounts made before verification existed) an email and password. At least
+// one of email and phone is always set.
 const userSchema = new Schema(
   {
     email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
-    // Only for accounts that sign in with email.
+    // Confirmed with a code through Phone.Email. Only verified emails can be
+    // found by friends.
+    emailVerified: { type: Boolean, default: false },
+    // Only accounts from before verification have one; they can still sign in
+    // with it.
     passwordHash: { type: String },
     name: { type: String, required: true, trim: true, maxlength: 60 },
     // Always verified through Phone.Email: it's only ever set from a confirmed
-    // sign-in, so friends who find you by number have the right person.
+    // code, so friends who find you by number have the right person.
     // Digits only with the country code, e.g. 919876543210.
     phone: { type: String, unique: true, sparse: true },
   },
@@ -19,12 +24,24 @@ const userSchema = new Schema(
 export type UserDoc = InferSchemaType<typeof userSchema> & { _id: Types.ObjectId };
 export const User = model('User', userSchema);
 
-/** What other people get to see of a person. */
-export function publicUser(user: Pick<UserDoc, '_id' | 'name' | 'email'>) {
-  return { id: user._id.toString(), name: user.name, email: user.email ?? undefined };
+/** What other people get to see of a person: their email only once verified. */
+export function publicUser(user: {
+  _id: Types.ObjectId;
+  name: string;
+  email?: string | null;
+  emailVerified?: boolean | null;
+}) {
+  return { id: user._id.toString(), name: user.name, email: user.emailVerified ? (user.email ?? undefined) : undefined };
 }
 
-/** The signed-in person's own profile, which includes their phone. */
+/** The signed-in person's own profile. */
 export function ownProfile(user: UserDoc) {
-  return { ...publicUser(user), phone: user.phone ?? undefined, hasPassword: !!user.passwordHash };
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email ?? undefined,
+    emailVerified: !!user.emailVerified,
+    phone: user.phone ?? undefined,
+    hasPassword: !!user.passwordHash,
+  };
 }

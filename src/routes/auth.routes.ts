@@ -5,11 +5,13 @@ import { signInLimit } from '../middleware/rateLimit.middleware.js';
 
 export const authRoutes = Router();
 
-authRoutes.post('/auth/register', signInLimit, auth.register);
 authRoutes.post('/auth/login', signInLimit, auth.login);
 authRoutes.post('/auth/phone', signInLimit, auth.phoneLogin);
-authRoutes.post('/auth/phone/register', signInLimit, auth.phoneRegister);
+authRoutes.post('/auth/email', signInLimit, auth.emailLogin);
+authRoutes.post('/auth/signup', signInLimit, auth.registerWithTicket);
 authRoutes.get('/me', requireAuth, auth.getMe);
 authRoutes.patch('/me', requireAuth, auth.updateMe);
 authRoutes.post('/me/phone', requireAuth, signInLimit, auth.verifyPhone);
 authRoutes.delete('/me/phone', requireAuth, auth.removePhone);
+authRoutes.post('/me/email', requireAuth, signInLimit, auth.verifyEmail);
+authRoutes.delete('/me/email', requireAuth, auth.removeEmail);

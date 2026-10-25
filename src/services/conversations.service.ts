@@ -32,7 +32,7 @@ export async function listConversations(self: Types.ObjectId) {
 
   const otherIds = rows.map((r) => (r.last.sender.equals(self) ? r.last.recipient : r.last.sender));
   const people = new Map(
-    (await User.find({ _id: { $in: otherIds } }, 'name email').lean()).map((u) => [u._id.toString(), u]),
+    (await User.find({ _id: { $in: otherIds } }, 'name email emailVerified').lean()).map((u) => [u._id.toString(), u]),
   );
   return rows.flatMap((r, i) => {
     const other = people.get(otherIds[i].toString());
@@ -68,7 +68,7 @@ export async function sendMessage(
     title: content.title,
   });
   const out = publicMessage(message.toObject() as MessageDoc);
-  const sender = await User.findById(self, 'name email').lean();
+  const sender = await User.findById(self, 'name email emailVerified').lean();
   // To the friend, and to the sender's other devices.
   const live = { message: out, from: sender ? publicUser(sender) : undefined };
   emitTo(other, 'message', live);

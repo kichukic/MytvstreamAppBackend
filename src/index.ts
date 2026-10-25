@@ -20,6 +20,8 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors());
+// A whole contact list can be sent for matching; everything else is small.
+app.use('/contacts', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '32kb' }));
 app.use(routes);
 app.use(notFound);

@@ -12,7 +12,7 @@ type Link = { requester: Types.ObjectId; status: string } | null;
 type Person = { _id: Types.ObjectId; name: string; email?: string | null; emailVerified?: boolean | null };
 
 /** How `self` relates to the other side of a friendship record. */
-function relation(link: Link, self: Types.ObjectId): Relation {
+export function relationOf(link: Link, self: Types.ObjectId): Relation {
   if (!link) return 'none';
   if (link.status === 'accepted') return 'friends';
   return link.requester.equals(self) ? 'requested' : 'incoming';
@@ -24,7 +24,7 @@ export async function lookUp(self: Types.ObjectId, query: { email: string } | { 
   if (!user) throw new HttpError(404, 'No one on ForUs has that email or number.');
   if (user._id.equals(self)) throw new HttpError(400, "That's you.");
   const link = await Friendship.findOne({ pair: pairKey(self, user._id) });
-  return { user: publicUser(user), status: relation(link, self) };
+  return { user: publicUser(user), status: relationOf(link, self) };
 }
 
 /** Friends, plus requests waiting either way, most recent first. */

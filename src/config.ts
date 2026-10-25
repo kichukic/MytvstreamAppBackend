@@ -17,5 +17,8 @@ export const config = {
   // Atlas addresses don't name a database, so it's chosen here.
   mongoDb: process.env.MONGO_DB ?? 'forus',
   jwtSecret,
+  // Phone.Email's client id, for checking phone sign-ins with them. Without it
+  // the phone features answer that they aren't set up; everything else works.
+  phoneEmailClientId: process.env.PHONE_EMAIL_CLIENT_ID ?? '',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '30d',
 };

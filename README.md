@@ -40,14 +40,17 @@ see; the error middleware turns it into `{ "error": message }`.
 
 ## API
 
-All bodies are JSON. Everything except the two `/auth` routes needs
+All bodies are JSON. Everything except the `/auth/…` routes needs
 `Authorization: Bearer <token>`.
 
 | Method | Path | What |
 | --- | --- | --- |
-| POST | `/auth/register` | `{email, password, name, phone?}` → `{token, user}` |
+| POST | `/auth/register` | `{email, password, name}` → `{token, user}` |
 | POST | `/auth/login` | `{email, password}` → `{token, user}` |
-| GET / PATCH | `/me` | Your profile; PATCH `{name?, phone?}` (`""` removes the phone) |
+| POST | `/auth/phone` | `{accessToken}` from Phone.Email → `{isNew: false, token, user}` for a known number, or `{isNew: true, ticket, suggestedName?}` |
+| POST | `/auth/phone/register` | `{ticket, name}` → `{token, user}` (a phone-only account) |
+| GET / PATCH | `/me` | Your profile; PATCH `{name}` |
+| POST / DELETE | `/me/phone` | Add or change your number with `{accessToken}`; DELETE removes it (not on phone-only accounts) |
 | GET | `/users/lookup?email=…` or `?phone=…` | One person by exact match, and how you relate to them |
 | GET | `/friends` | `{friends, incoming, outgoing}` |
 | POST | `/friends/requests` | `{userId}`; asking someone who asked you accepts |
@@ -64,6 +67,10 @@ Socket.IO connects with `auth: {token}` and receives `message`, `read`,
 
 ## Notes
 
+- Phone numbers are only ever stored after Phone.Email confirms them: the app
+  sends the access token from their sign-in page, and the server asks
+  `https://eapi.phone.email/getuser` (with `PHONE_EMAIL_CLIENT_ID`) for the
+  number it verified. So finding a friend by number always finds the real owner.
 - Passwords are hashed with bcrypt; sign-in and lookups are rate-limited per IP.
 - Only friends can message each other.
 - Before putting this on the internet, run it behind HTTPS (and then build the

@@ -20,6 +20,9 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors());
+// A profile picture is a data URI, much larger than the rest of the API's
+// bodies. This has to be registered before the small global parser.
+app.use('/me/avatar', express.json({ limit: '3mb' }));
 // A whole contact list can be sent for matching; everything else is small.
 app.use('/contacts', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '32kb' }));

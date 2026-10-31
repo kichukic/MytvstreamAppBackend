@@ -62,7 +62,7 @@ export async function matchContacts(self: Types.ObjectId, input: { phones: strin
         { email: { $in: [...emails.keys()] }, emailVerified: true },
       ],
     },
-    'name email emailVerified phone',
+    'name email emailVerified phone avatar avatarUpdatedAt',
   ).lean();
   if (!users.length) return [];
 

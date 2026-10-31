@@ -19,6 +19,11 @@ const userSchema = new Schema(
     phone: { type: String, unique: true, sparse: true },
     isAdmin: { type: Boolean, default: false },
     isadmin: { type: Boolean, default: false },
+    // A small square picture, as a `data:image/…;base64,…` string. Atlas has
+    // no file store, so the bytes live with the account; publicUser hands out
+    // a short URL instead of the whole picture.
+    avatar: { type: String },
+    avatarUpdatedAt: { type: Date },
     screenTimeSeconds: { type: Number, default: 0 },
     lastActiveAt: { type: Date, default: Date.now },
   },
@@ -34,8 +39,22 @@ export function publicUser(user: {
   name: string;
   email?: string | null;
   emailVerified?: boolean | null;
+  avatar?: string | null;
+  avatarUpdatedAt?: Date | null;
 }) {
-  return { id: user._id.toString(), name: user.name, email: user.emailVerified ? (user.email ?? undefined) : undefined };
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.emailVerified ? (user.email ?? undefined) : undefined,
+    avatar: avatarPath(user),
+  };
+}
+
+/** Where the account's picture is served, with a version for caching. */
+function avatarPath(user: { _id: Types.ObjectId; avatar?: string | null; avatarUpdatedAt?: Date | null }) {
+  if (!user.avatar) return undefined;
+  const version = user.avatarUpdatedAt ? user.avatarUpdatedAt.getTime() : 0;
+  return `/avatars/${user._id.toString()}?v=${version}`;
 }
 
 /** The signed-in person's own profile. */
@@ -48,6 +67,7 @@ export function ownProfile(user: UserDoc) {
     phone: user.phone ?? undefined,
     hasPassword: !!user.passwordHash,
     isAdmin: !!(user.isAdmin || (user as any).isadmin),
+    avatar: avatarPath(user),
     screenTimeSeconds: user.screenTimeSeconds ?? 0,
     lastActiveAt: user.lastActiveAt,
   };

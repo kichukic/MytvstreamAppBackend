@@ -76,6 +76,54 @@ export async function updateName(userId: Types.ObjectId, name: string) {
   return ownProfile(user);
 }
 
+// A profile picture is small enough to keep in the account document. The app
+// sends a JPEG/PNG/WebP data URI, already cropped square and resized.
+const AVATAR_DATA = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+const MAX_AVATAR_BYTES = 1_500_000;
+
+function looksLikeImage(bytes: Buffer, mime: string): boolean {
+  if (mime === 'image/jpeg') return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mime === 'image/png') {
+    return bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  return (
+    bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP'
+  );
+}
+
+/** Sets (or, with null, clears) the signed-in person's profile picture. */
+export async function updateAvatar(userId: Types.ObjectId, avatar: string | null) {
+  const user = await findSelf(userId);
+  if (!avatar) {
+    user.avatar = undefined;
+    user.avatarUpdatedAt = undefined;
+    await user.save();
+    return ownProfile(user);
+  }
+
+  const match = AVATAR_DATA.exec(avatar);
+  if (!match) throw new HttpError(400, 'Choose a JPEG, PNG or WebP picture.');
+  const bytes = Buffer.from(match[2], 'base64');
+  if (bytes.length === 0) throw new HttpError(400, 'That picture is empty.');
+  if (bytes.length > MAX_AVATAR_BYTES) {
+    throw new HttpError(413, 'That picture is too large. Choose a smaller one.');
+  }
+  if (!looksLikeImage(bytes, match[1])) throw new HttpError(400, "That file isn't a picture.");
+
+  user.avatar = `data:${match[1]};base64,${match[2]}`;
+  user.avatarUpdatedAt = new Date();
+  await user.save();
+  return ownProfile(user);
+}
+
+/** The bytes of someone's profile picture, for the short URL in publicUser. */
+export async function getAvatarBytes(userId: Types.ObjectId) {
+  const user = await User.findById(userId, 'avatar').lean();
+  const match = user?.avatar ? AVATAR_DATA.exec(user.avatar) : null;
+  if (!match) return null;
+  return { mime: match[1], bytes: Buffer.from(match[2], 'base64') };
+}
+
 /** Adds (or changes) the signed-in person's number, once Phone.Email confirms it. */
 export async function verifyPhone(userId: Types.ObjectId, accessToken: string) {
   const { phone } = await verifyPhoneToken(accessToken);

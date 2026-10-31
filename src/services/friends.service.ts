@@ -9,7 +9,14 @@ import { emitTo } from './realtime.service.js';
 
 export type Relation = 'none' | 'friends' | 'requested' | 'incoming';
 type Link = { requester: Types.ObjectId; status: string } | null;
-type Person = { _id: Types.ObjectId; name: string; email?: string | null; emailVerified?: boolean | null };
+type Person = {
+  _id: Types.ObjectId;
+  name: string;
+  email?: string | null;
+  emailVerified?: boolean | null;
+  avatar?: string | null;
+  avatarUpdatedAt?: Date | null;
+};
 
 /** How `self` relates to the other side of a friendship record. */
 export function relationOf(link: Link, self: Types.ObjectId): Relation {
@@ -30,8 +37,8 @@ export async function lookUp(self: Types.ObjectId, query: { email: string } | { 
 /** Friends, plus requests waiting either way, most recent first. */
 export async function listFriends(self: Types.ObjectId) {
   const links = await Friendship.find({ $or: [{ requester: self }, { recipient: self }] })
-    .populate<{ requester: Person }>('requester', 'name email emailVerified')
-    .populate<{ recipient: Person }>('recipient', 'name email emailVerified')
+    .populate<{ requester: Person }>('requester', 'name email emailVerified avatar avatarUpdatedAt')
+    .populate<{ recipient: Person }>('recipient', 'name email emailVerified avatar avatarUpdatedAt')
     .sort({ updatedAt: -1 })
     .lean();
 
@@ -53,7 +60,7 @@ export async function listFriends(self: Types.ObjectId) {
 }
 
 async function notify(to: Types.ObjectId, event: 'friend-request' | 'friend-accepted', from: Types.ObjectId, extra = {}) {
-  const user = await User.findById(from, 'name email emailVerified').lean();
+  const user = await User.findById(from, 'name email emailVerified avatar avatarUpdatedAt').lean();
   if (user) emitTo(to, event, { ...extra, user: publicUser(user) });
 }
 

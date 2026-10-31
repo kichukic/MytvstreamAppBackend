@@ -12,6 +12,10 @@ npm install
 cp .env.example .env        # then set JWT_SECRET: openssl rand -hex 32
 npm run db:up               # MongoDB in Docker, on 127.0.0.1:27018
 npm run dev                 # the server, restarting on changes
+
+GEMINI_API_KEY (aistudio.google.com/apikey) turns on the AI search and the
+Tonight concierge. Without it those routes answer 503 and everything else runs
+as usual.
 ```
 
 The server listens on every interface at port 4000, so a phone on the same
@@ -40,8 +44,8 @@ see; the error middleware turns it into `{ "error": message }`.
 
 ## API
 
-All bodies are JSON. Everything except the `/auth/…` routes needs
-`Authorization: Bearer <token>`.
+All bodies are JSON. Everything except the `/auth/…` routes and
+`/avatars/:userId` needs `Authorization: Bearer <token>`.
 
 | Method | Path | What |
 | --- | --- | --- |
@@ -50,6 +54,8 @@ All bodies are JSON. Everything except the `/auth/…` routes needs
 | POST | `/auth/phone` | `{accessToken}` from Phone.Email → `{isNew: false, token, user}` for a known number, or `{isNew: true, ticket, suggestedName?}` |
 | POST | `/auth/phone/register` | `{ticket, name}` → `{token, user}` (a phone-only account) |
 | GET / PATCH | `/me` | Your profile; PATCH `{name}` |
+| PATCH | `/me/avatar` | `{avatar: "data:image/jpeg;base64,…"}` (a square picture, at most 1.5 MB), or `{avatar: null}` to remove it |
+| GET | `/avatars/:userId` | Public: the picture bytes behind the short path in profiles |
 | POST / DELETE | `/me/phone` | Add or change your number with `{accessToken}`; DELETE removes it (not on phone-only accounts) |
 | GET | `/users/lookup?email=…` or `?phone=…` | One person by exact match, and how you relate to them |
 | GET | `/friends` | `{friends, incoming, outgoing}` |
@@ -61,9 +67,25 @@ All bodies are JSON. Everything except the `/auth/…` routes needs
 | GET | `/conversations/:userId/messages?before=<ISO date>` | 40 at a time, newest first |
 | POST | `/conversations/:userId/messages` | `{text}` or `{title: {kind: 'video', videoId, title}}` |
 | POST | `/conversations/:userId/read` | Mark the friend's messages read |
+| GET | `/history` | The signed-in person's watched titles |
+| POST | `/history` | Merge the app's watched titles into the account's |
+| DELETE | `/history` | Clear them |
+| POST | `/ai/search` | `{prompt}` → `{results: [{title, year, reason}]}` from Gemini |
+| POST | `/ai/tonight` | `{mood?, minutes?, company?, language?, recentTitles?}` → `{pick: {title, year, kind, reason}}` |
 
 Socket.IO connects with `auth: {token}` and receives `message`, `read`,
-`friend-request`, `friend-accepted` and `friend-removed`.
+`friend-request`, `friend-accepted`, `friend-removed`, `presence` and
+`watching`. Presence and watching are friends-only and kept in memory:
+
+| Direction | Event | What |
+| --- | --- | --- |
+| → | `presence:list` | Ask for the ids of friends online now |
+| → | `watching:list` | Ask what friends are playing |
+| → | `watching:update` | `{kind, …}` announce this device's playback |
+| → | `watching:stop` | Stop showing it |
+| ← | `presence` / `presence:list` | A friend came online or went away |
+| ← | `watching` / `watching:stop` | A friend started, changed or stopped a title |
+| ← | `watching:list` | `{items: [{user, watching, at}], at}`: `at` is when the list was made |
 
 ## Notes
 

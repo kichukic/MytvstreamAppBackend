@@ -35,7 +35,13 @@ const messageSchema = new Schema(
     // A voice message. The recording itself lives on the two phones; the
     // server holds it only until the recipient's phone has it (VoiceClip).
     voice: { type: new Schema({ durationMs: { type: Number, required: true } }, { _id: false }) },
+    // When the recipient's app had it: marked as soon as a device connected or
+    // fetched messages, before they open the conversation and read it.
+    deliveredAt: { type: Date },
     readAt: { type: Date },
+    // The app's id for a message while it is being sent, so a retry that
+    // reached the server before losing its answer doesn't make a second copy.
+    clientId: { type: String, maxlength: 100 },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
@@ -43,7 +49,9 @@ const messageSchema = new Schema(
 // everything someone sent (for the conversation list).
 messageSchema.index({ conversation: 1, createdAt: -1 });
 messageSchema.index({ recipient: 1, readAt: 1 });
+messageSchema.index({ recipient: 1, deliveredAt: 1 });
 messageSchema.index({ sender: 1, createdAt: -1 });
+messageSchema.index({ sender: 1, clientId: 1 }, { unique: true, partialFilterExpression: { clientId: { $exists: true } } });
 
 export type MessageDoc = InferSchemaType<typeof messageSchema> & { _id: Types.ObjectId; createdAt: Date };
 export const Message = model('Message', messageSchema);
@@ -57,6 +65,7 @@ export function publicMessage(m: MessageDoc) {
     title: m.title ?? undefined,
     voice: m.voice ? { durationMs: m.voice.durationMs } : undefined,
     createdAt: m.createdAt.toISOString(),
+    deliveredAt: m.deliveredAt ? m.deliveredAt.toISOString() : undefined,
     readAt: m.readAt ? m.readAt.toISOString() : undefined,
   };
 }

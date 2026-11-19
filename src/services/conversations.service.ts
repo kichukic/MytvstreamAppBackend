@@ -6,7 +6,7 @@ import { Message, publicMessage, type MessageDoc } from '../models/message.model
 import { User, publicUser } from '../models/user.model.js';
 import { VoiceClip } from '../models/voiceClip.model.js';
 import { assertFriends } from './friends.service.js';
-import { emitTo, isOnline } from './realtime.service.js';
+import { emitTo } from './realtime.service.js';
 
 const PAGE_SIZE = 40;
 const MAX_CONVERSATIONS = 200;

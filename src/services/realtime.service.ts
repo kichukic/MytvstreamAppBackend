@@ -126,6 +126,53 @@ export function startRealtime(server: HttpServer) {
       }).exec().catch(() => {});
     });
 
+    // Watch party: create/join a room and broadcast playback state.
+    socket.on('party:create', (data: unknown) => {
+      const code = typeof data === 'object' && data && 'code' in data ? String((data as { code: unknown }).code).trim().slice(0, 12) : '';
+      if (!code) return;
+      socket.join(`party:${code}`);
+      socket.data.party = code;
+      socket.emit('party:joined', { code, host: userId });
+      io?.to(`party:${code}`).emit('party:member', { userId, joined: true });
+    });
+    socket.on('party:join', (data: unknown) => {
+      const code = typeof data === 'object' && data && 'code' in data ? String((data as { code: unknown }).code).trim().slice(0, 12) : '';
+      if (!code) return;
+      socket.join(`party:${code}`);
+      socket.data.party = code;
+      socket.emit('party:joined', { code });
+      io?.to(`party:${code}`).emit('party:member', { userId, joined: true });
+    });
+    socket.on('party:leave', () => {
+      const code = socket.data.party as string | undefined;
+      if (!code) return;
+      socket.leave(`party:${code}`);
+      socket.data.party = undefined;
+      io?.to(`party:${code}`).emit('party:member', { userId, joined: false });
+    });
+    socket.on('party:play', (data: unknown) => {
+      const code = socket.data.party as string | undefined;
+      if (!code) return;
+      io?.to(`party:${code}`).emit('party:play', { userId, ...(data && typeof data === 'object' ? data : {}) });
+    });
+    socket.on('party:pause', (data: unknown) => {
+      const code = socket.data.party as string | undefined;
+      if (!code) return;
+      io?.to(`party:${code}`).emit('party:pause', { userId, ...(data && typeof data === 'object' ? data : {}) });
+    });
+    socket.on('party:seek', (data: unknown) => {
+      const code = socket.data.party as string | undefined;
+      if (!code) return;
+      io?.to(`party:${code}`).emit('party:seek', { userId, ...(data && typeof data === 'object' ? data : {}) });
+    });
+    socket.on('party:chat', (data: unknown) => {
+      const code = socket.data.party as string | undefined;
+      if (!code) return;
+      const text = typeof data === 'object' && data && 'text' in data ? String((data as { text: unknown }).text).slice(0, 500) : '';
+      if (!text) return;
+      io?.to(`party:${code}`).emit('party:chat', { userId, text, at: new Date().toISOString() });
+    });
+
     socket.on('disconnect', () => {
       const existing = activeUsers.get(userId);
       if (existing) {

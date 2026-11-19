@@ -7,6 +7,7 @@ import { User, publicUser } from '../models/user.model.js';
 import { VoiceClip } from '../models/voiceClip.model.js';
 import { assertFriends } from './friends.service.js';
 import { emitTo } from './realtime.service.js';
+import { pushToUser } from './push.service.js';
 
 const PAGE_SIZE = 40;
 const MAX_CONVERSATIONS = 200;
@@ -85,6 +86,10 @@ export async function sendMessage(
   const live = { message: out, from: sender ? publicUser(sender) : undefined };
   emitTo(other, 'message', live);
   emitTo(self, 'message', live);
+  // Push notification to the recipient (best effort).
+  const senderName = sender?.name ?? 'Someone';
+  const preview = content.text ? content.text.slice(0, 80) : content.title ? `Sent a title: ${content.title.title}` : 'Sent a voice message';
+  void pushToUser(String(other), { title: senderName, body: preview, data: { kind: 'message', from: String(self) } });
   return out;
 }
 

@@ -6,6 +6,7 @@ import { contactsRoutes } from './contacts.routes.js';
 import { conversationsRoutes } from './conversations.routes.js';
 import { friendsRoutes } from './friends.routes.js';
 import { historyRoutes } from './history.routes.js';
+import { activityRoutes } from './activity.routes.js';
 import { adminRoutes } from './admin.routes.js';
 import { bannerRoutes } from './banner.routes.js';
 
@@ -19,6 +20,7 @@ routes.use(authRoutes);
 routes.use(friendsRoutes);
 routes.use(conversationsRoutes);
 routes.use(historyRoutes);
+routes.use(activityRoutes);
 routes.use(contactsRoutes);
 routes.use(adminRoutes);
 routes.use(bannerRoutes);

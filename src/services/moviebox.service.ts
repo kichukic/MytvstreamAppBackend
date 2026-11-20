@@ -112,8 +112,51 @@ async function getToken(): Promise<string> {
   return signingIn;
 }
 
-function isNoticeVideo(url: string): boolean {
-  return /notice|sample|trailer/i.test(url);
+function isNoticeVideo(url?: string): boolean {
+  if (!url) return false;
+  // The dummy "update your app" clip. Its filename hash is stable, and it
+  // always lives under macdn.aoneroom.com/other/YYYY/MM/DD/.
+  if (url.includes('80da52722ee7de7a4303290af6783424')) return true;
+  if (/macdn\.aoneroom\.com\/other\/\d{4}\/\d{2}\/\d{2}\//.test(url)) return true;
+  return false;
+}
+
+type RawResource = {
+  se?: number;
+  ep?: number;
+  resolution?: number;
+  size?: string | number;
+  resourceLink?: string;
+  downloadUrl?: string;
+};
+
+function bestResourceLink(
+  details: { resourceDetectors?: { resolutionList?: RawResource[]; downloadUrl?: string }[] } | null,
+  season: number,
+  episode: number,
+): { url: string; resolution: number; size: number } | null {
+  let best: { url: string; resolution: number; size: number } | null = null;
+  for (const detector of details?.resourceDetectors ?? []) {
+    const list = detector?.resolutionList ?? [];
+    const matched = list.filter((raw) => {
+      if (season > 0 && raw?.se != null && Number(raw.se) !== season) return false;
+      if (episode > 0 && raw?.ep != null && Number(raw.ep) !== episode) return false;
+      return true;
+    });
+    const source = matched.length > 0 ? matched : list;
+    for (const raw of source) {
+      const url = raw?.resourceLink;
+      if (!url || isNoticeVideo(url)) continue;
+      const resolution = Number(raw.resolution ?? 0);
+      if (!best || resolution > best.resolution) {
+        best = { url, resolution, size: Number(raw.size ?? 0) };
+      }
+    }
+    if (!best && detector?.downloadUrl && !isNoticeVideo(detector.downloadUrl)) {
+      best = { url: detector.downloadUrl, resolution: 720, size: 0 };
+    }
+  }
+  return best;
 }
 
 async function request<T>(method: 'GET' | 'POST', path: string, params: [string, string][] = [], body?: unknown, auth = true): Promise<T> {
@@ -170,6 +213,21 @@ async function request<T>(method: 'GET' | 'POST', path: string, params: [string,
 }
 
 export async function resolveStream(subjectId: string, season: number, episode: number): Promise<{ url: string; resolution: number; size: number; headers?: Record<string, string> } | null> {
+  // The subject details carry signed CDN links to the whole film. The
+  // play-info request answers with a fifteen-minute preview for members-only
+  // titles, so those links are preferred and play-info is only the fallback.
+  try {
+    const details = await request<{ resourceDetectors?: { resolutionList?: RawResource[]; downloadUrl?: string }[] }>(
+      'GET',
+      `${BFF}/subject-api/get`,
+      [['subjectId', subjectId]],
+    );
+    const best = bestResourceLink(details, season, episode);
+    if (best?.url) return best;
+  } catch {
+    // Fall back to play-info below.
+  }
+
   try {
     const params: [string, string][] = [['subjectId', subjectId]];
     if (season > 0 && episode > 0) {
